@@ -1,6 +1,6 @@
 # tvsfglasso_supplementary
 
-Supplementary materials for the article 'tvsfglasso - time-varying scale-free graphical lasso' (to appear).
+Supplementary materials for the article "tvsfglasso: time-varying scale-free graphical lasso for network estimation from time-series data" (to appear).
 
 ## Dependencies
 
