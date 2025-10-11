@@ -79,7 +79,8 @@ X = as.matrix(data[, -1])
 
 ind = apply(X, 1, mean)
 
-ind = which(ind > 100)
+#ind = which(ind > 100)
+ind = which(ind > 10)
 
 data = data[ind, ]
 
@@ -104,18 +105,37 @@ plot(unlist(data[7, -1]), type = "l")
 
 plot(unlist(data[11, -1]), type = "l")
 
+plot(unlist(data[11, -1]), type = "l")
+
+plot(unlist(data[which(data$gene %in% "FBgn0000606"), -1]),
+     type = "l",
+     main = "EVE")
+
+plot(unlist(data[which(data$gene %in% "FBgn0001077"), -1]),
+     type = "l",
+     main = "FTZ")
+
+plot(unlist(data[which(data$gene %in% "FBgn0001078"), -1]),
+     type = "l",
+     main = "FTZ-F1")
+
 #
 
 X = as.matrix(data[, -1])
 
 rownames(X) = data$gene
 
-v = apply(X, 1, var)
+v = apply(X, 1, function(x) var(x, na.rm = TRUE))
 
-ind = rank(-v)
-
-ind = ind[1:200]
+v = sort(v, decreasing = TRUE)[1:400]
+ind = names(v)
 
 X = X[ind, ]
 
 dim(X)
+
+# FBgn0000606 EVE
+# FBgn0001077 FTZ
+# FBgn0001078 FTZ-F1
+
+c("FBgn0000606", "FBgn0001077", "FBgn0001078") %in% rownames(X)

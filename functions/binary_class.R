@@ -1,12 +1,19 @@
 binary_class = function(A, A_est){
   
-  TP = sum(A_est*A)/2
+  A_est = A_est[upper.tri(A_est)]
+  A = A[upper.tri(A)]
   
-  FP = sum(A_est*(!A))/2
+  #TP = sum(A_est*A)/2
+  TP = sum(A_est*A)
   
-  FN = sum((!A_est)*A)/2
+  #FP = sum(A_est*(!A))/2
+  FP = sum(A_est*(!A))
   
-  TN = sum((!A_est)*(!A))/2
+  #FN = sum((!A_est)*A)/2
+  FN = sum((!A_est)*A)
+  
+  #TN = sum((!A_est)*(!A))/2
+  TN = sum((!A_est)*(!A))
   
   TP = as.numeric(TP)
   FP = as.numeric(FP)
@@ -31,13 +38,22 @@ binary_class = function(A, A_est){
   
   F1 = (2*TP)/(2*TP + FP + FN)
   
-  results = list(TP = TP, FP = FP, FN = FN, TN = TN,
+  JI = TP/(TP + FN + FP) #Jaccard index
+  
+  ED = FP + FN # Edge distance
+  
+  results = list(TP = TP, 
+                 FP = FP, 
+                 FN = FN, 
+                 TN = TN,
                  FDR = FDR,
                  TPR = TPR,
                  Precision = Precision,
                  FPR = FPR,
                  MCC = MCC,
-                 F1 = F1)
+                 F1 = F1,
+                 JI = JI,
+                 ED = ED)
   
   return(results)
   

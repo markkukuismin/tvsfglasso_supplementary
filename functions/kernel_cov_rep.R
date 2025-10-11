@@ -28,7 +28,8 @@ kernel_cov_rep <- function(X = NULL, N = NULL, pos = NULL, h = NULL, kernel = "g
   
   p <- nrow(X[[1]])
   
-  if(is.null(h)) h <- 5.848/N^(1/3)
+  #if(is.null(h)) h <- 5.848/N^(1/3) # Zhou et al 2010 when changes time point 200, 200^1/3 = 5.848
+  if(is.null(h)) h <- 1
 
   S_temp <- vector("list", N)
   

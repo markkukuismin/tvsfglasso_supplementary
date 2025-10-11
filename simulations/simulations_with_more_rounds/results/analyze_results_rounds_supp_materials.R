@@ -2,33 +2,44 @@
 library(tidyverse)
 library(dplyr)
 
-# yang_peng, huge, liu_ihler, hglasso, or smooth
+# yang_peng, huge, liu_ihler, hglasso, smooth, er
 
-simulator = "smooth"
+simulator = "er"
 
 if(simulator == "liu_ihler"){
-  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/liu_ihler", pattern = "*.txt", full.names = TRUE)
+  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/liu_ihler/liu_ihler_new", pattern = "*.txt", full.names = TRUE)
   files_temp_glasso_pooled = list.files(path = "simulations/simulations_with_more_rounds/glasso_pooled/results/liu_ihler", pattern = "*.txt", full.names = TRUE)
+  files_temp_bandwidth = list.files("simulations/simulations_with_more_rounds/results/liu_ihler/tvglasso_and_tvsfglasso_bandwidth_res", pattern = "*_1.txt", full.names = TRUE)
 }
 
 if(simulator == "yang_peng"){
-  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/yang_peng", pattern = "*.txt", full.names = TRUE)
+  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/yang_peng/yang_peng_new", pattern = "*.txt", full.names = TRUE)
   files_temp_glasso_pooled = list.files(path = "simulations/simulations_with_more_rounds/glasso_pooled/results/yang_peng", pattern = "*.txt", full.names = TRUE)
+  files_temp_bandwidth = list.files("simulations/simulations_with_more_rounds/results/yang_peng/tvglasso_and_tvsfglasso_bandwidth_res", pattern = "*_1.txt", full.names = TRUE)
 }
 
 if(simulator == "huge"){
-  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/huge", pattern = "*.txt", full.names = TRUE)
+  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/huge/huge_new", pattern = "*.txt", full.names = TRUE)
   files_temp_glasso_pooled = list.files(path = "simulations/simulations_with_more_rounds/glasso_pooled/results/huge", pattern = "*.txt", full.names = TRUE)
+  files_temp_bandwidth = list.files("simulations/simulations_with_more_rounds/results/huge/tvglasso_and_tvsfglasso_bandwidth_res", pattern = "*_1.txt", full.names = TRUE)
 }
 
 if(simulator == "hglasso"){
-  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/hglasso", pattern = "*.txt", full.names = TRUE)
+  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/hglasso/hgasso_new", pattern = "*.txt", full.names = TRUE)
   files_temp_glasso_pooled = list.files(path = "simulations/simulations_with_more_rounds/glasso_pooled/results/hglasso", pattern = "*.txt", full.names = TRUE)
+  files_temp_bandwidth = list.files("simulations/simulations_with_more_rounds/results/hglasso/tvglasso_and_tvsfglasso_bandwidth_res", pattern = "*_1.txt", full.names = TRUE)
 }
 
 if(simulator == "smooth"){
-  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/smooth", pattern = "*.txt", full.names = TRUE)
+  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/smooth/smooth_new", pattern = "*.txt", full.names = TRUE)
   files_temp_glasso_pooled = list.files(path = "simulations/simulations_with_more_rounds/glasso_pooled/results/smooth", pattern = "*.txt", full.names = TRUE)
+  files_temp_bandwidth = list.files("simulations/simulations_with_more_rounds/results/smooth/tvglasso_and_tvsfglasso_bandwidth_res", pattern = "*_1.txt", full.names = TRUE)
+}
+
+if(simulator == "er"){
+  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/er/er_new", pattern = "*.txt", full.names = TRUE)
+  files_temp_glasso_pooled = list.files(path = "simulations/simulations_with_more_rounds/glasso_pooled/results/er", pattern = "*.txt", full.names = TRUE)
+  files_temp_bandwidth = list.files("simulations/simulations_with_more_rounds/results/er/tvglasso_and_tvsfglasso_bandwidth_res", pattern = "*_1.txt", full.names = TRUE)
 }
 
 Data = lapply(files_temp, 
@@ -42,16 +53,27 @@ Data = dplyr::bind_rows(Data)
 
 Datagl = lapply(files_temp_glasso_pooled, 
                 function(x) read.table(x, 
-                                     header = TRUE, 
-                                     stringsAsFactors = TRUE))
+                                       header = TRUE, 
+                                       stringsAsFactors = TRUE))
 
 Datagl = dplyr::bind_rows(Datagl)
 
 Datagl$Method = "pglasso"
 
-Data = dplyr::bind_rows(Data, Datagl)
+#
+
+Databand = lapply(files_temp_bandwidth, 
+                  function(x) read.table(x, 
+                                         header = TRUE, 
+                                         stringsAsFactors = TRUE))
+
+Databand = dplyr::bind_rows(Databand)
+
+Databand = Databand[, -which(colnames(Databand) == "h")]
 
 #
+
+Data = dplyr::bind_rows(Data, Datagl, Databand)
 
 Data$N = as.factor(Data$N)
 Data$n = as.factor(Data$n)
@@ -60,7 +82,7 @@ Data$p = as.factor(Data$p)
 Data$Metric = as.factor(Data$Metric)
 
 Data = Data %>%
-  filter(Metric %in% c("FPR", "MCC", "FDR", "Pre", "TPR", "F1")) %>%
+  filter(Metric %in% c("FPR", "MCC", "FDR", "Pre", "TPR", "F1", "JI", "ED")) %>%
   filter(Method %in% c("pglasso", "tvglasso", "tvsfglasso"))
 
 
@@ -137,6 +159,13 @@ if(simulator == "hglasso"){
 
 if(simulator == "smooth"){
   ggsave("simulations/simulations_with_more_rounds/results/figures_supplementary/smooth_simulator.pdf",
+         plot = boxp,
+         width = 10,
+         height = 7)
+}
+
+if(simulator == "er"){
+  ggsave("simulations/simulations_with_more_rounds/results/figures_supplementary/er_simulator.pdf",
          plot = boxp,
          width = 10,
          height = 7)

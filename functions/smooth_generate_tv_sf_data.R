@@ -186,7 +186,7 @@ smooth_generate_tv_sf_data <- function(n = 1, N = 100, p = 100, rho = 0.25, init
     
     adj <- Theta_temp
     diag(adj) <- 0
-    adj[adj !=0] <- 1
+    adj[adj != 0] <- 1
     ts_true_data[[i]] <- adj
     
     b <- diag(diag(Theta_temp), p)

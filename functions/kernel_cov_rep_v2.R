@@ -8,7 +8,7 @@ kernel_cov_rep_v2 <- function(X = NULL, N = NULL, pos = NULL, h = NULL, kernel =
   
   p <- nrow(X[[1]])
   
-  if(is.null(h)) h <- 5.848/N^(1/3)
+  if(is.null(h)) h <- 1
   
   S_temp <- vector("list", N)
   

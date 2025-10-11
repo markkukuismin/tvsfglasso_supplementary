@@ -14,6 +14,7 @@ source("functions/huge_generate_tv_sf_data.R")
 source("functions/generate_tv_sf_data.R")
 source("functions/smooth_generate_tv_sf_data.R")
 source("functions/loggle.graph.R")
+source("functions/generate_tv_er_data.R")
 
 tr = function(x) sum(diag(x))
 
@@ -22,9 +23,9 @@ tr = function(x) sum(diag(x))
 
 set.seed(1)
 
-# # hglasso, huge, liu_ihler, smooth, yang_peng
+# # hglasso, huge, liu_ihler, smooth, yang_peng, er
 
-simulator = "yang_peng"
+simulator = "er"
 
 p = 100
 n = 10 # Nmb of repetitions (10, 50, 100)
@@ -92,6 +93,21 @@ if(simulator == "huge"){
   
 }
 
+if(simulator == "er"){
+  
+  e_add_del = 10 # how many edges are added/removed at the change point
+  cp_step = 10 # every cp_step time step, e_add_del nodes are deleted and added
+  cp = seq(cp_step, N - cp_step, by = cp_step) # changepoints
+  
+  example = generate_tv_er_data(n = n, 
+                                N = N, 
+                                p = p,
+                                e_add_del = e_add_del,
+                                cp_step = cp_step,
+                                cp = cp)
+  
+}
+
 if(simulator == "hglasso"){
   
   example <- hglasso_generate_tv_sf_data(p = p, 
@@ -146,7 +162,7 @@ for(sim_i in 1:SM){
   
   nlambda = 25
   
-  R_gl_pooled = matrix(0, 10, 1)
+  R_gl_pooled = matrix(0, 12, 1)
   
   lambda.min.ratio = 0.1
   
@@ -213,6 +229,8 @@ for(sim_i in 1:SM){
                  FDR = R_gl_pooled["FDR", ],
                  FPR = R_gl_pooled["FPR", ],
                  F1 = R_gl_pooled["F1", ],
+                 JI = R_gl_pooled["JI", ],
+                 ED = R_gl_pooled["ED", ],
                  Method = m,
                  Sim_round = sim_i)
   
@@ -226,7 +244,7 @@ for(sim_i in 1:SM){
 Sim_res = dplyr::bind_rows(Results)
 
 Sim_res = tidyr::pivot_longer(Sim_res, 
-                              cols = 1:10, 
+                              cols = 1:12, 
                               values_to = "Value",
                               names_to = "Metric")
 

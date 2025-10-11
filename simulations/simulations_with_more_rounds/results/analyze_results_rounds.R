@@ -2,33 +2,44 @@
 library(tidyverse)
 library(dplyr)
 
-# yang_peng, huge, liu_ihler, hglasso, or smooth
+# hglasso, huge, liu_ihler, yang_peng, smooth, er
 
-simulator = "smooth"
+simulator = "er"
 
 if(simulator == "liu_ihler"){
-  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/liu_ihler", pattern = "*.txt", full.names = TRUE)
+  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/liu_ihler/liu_ihler_new", pattern = "*.txt", full.names = TRUE)
   files_temp_glasso_pooled = list.files(path = "simulations/simulations_with_more_rounds/glasso_pooled/results/liu_ihler", pattern = "*.txt", full.names = TRUE)
+  files_temp_bandwidth = list.files("simulations/simulations_with_more_rounds/results/liu_ihler/tvglasso_and_tvsfglasso_bandwidth_res", pattern = "*_1.txt", full.names = TRUE)
 }
 
 if(simulator == "yang_peng"){
-  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/yang_peng", pattern = "*.txt", full.names = TRUE)
+  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/yang_peng/yang_peng_new", pattern = "*.txt", full.names = TRUE)
   files_temp_glasso_pooled = list.files(path = "simulations/simulations_with_more_rounds/glasso_pooled/results/yang_peng", pattern = "*.txt", full.names = TRUE)
+  files_temp_bandwidth = list.files("simulations/simulations_with_more_rounds/results/yang_peng/tvglasso_and_tvsfglasso_bandwidth_res", pattern = "*_1.txt", full.names = TRUE)
 }
 
 if(simulator == "huge"){
-  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/huge", pattern = "*.txt", full.names = TRUE)
+  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/huge/huge_new", pattern = "*.txt", full.names = TRUE)
   files_temp_glasso_pooled = list.files(path = "simulations/simulations_with_more_rounds/glasso_pooled/results/huge", pattern = "*.txt", full.names = TRUE)
+  files_temp_bandwidth = list.files("simulations/simulations_with_more_rounds/results/huge/tvglasso_and_tvsfglasso_bandwidth_res", pattern = "*_1.txt", full.names = TRUE)
 }
 
 if(simulator == "hglasso"){
-  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/hglasso", pattern = "*.txt", full.names = TRUE)
+  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/hglasso/hglasso_new", pattern = "*.txt", full.names = TRUE)
   files_temp_glasso_pooled = list.files(path = "simulations/simulations_with_more_rounds/glasso_pooled/results/hglasso", pattern = "*.txt", full.names = TRUE)
+  files_temp_bandwidth = list.files("simulations/simulations_with_more_rounds/results/hglasso/tvglasso_and_tvsfglasso_bandwidth_res", pattern = "*_1.txt", full.names = TRUE)
 }
 
 if(simulator == "smooth"){
-  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/smooth", pattern = "*.txt", full.names = TRUE)
+  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/smooth/smooth_new", pattern = "*.txt", full.names = TRUE)
   files_temp_glasso_pooled = list.files(path = "simulations/simulations_with_more_rounds/glasso_pooled/results/smooth", pattern = "*.txt", full.names = TRUE)
+  files_temp_bandwidth = list.files("simulations/simulations_with_more_rounds/results/smooth/tvglasso_and_tvsfglasso_bandwidth_res", pattern = "*_1.txt", full.names = TRUE)
+}
+
+if(simulator == "er"){
+  files_temp = list.files(path = "simulations/simulations_with_more_rounds/results/er/er_new", pattern = "*.txt", full.names = TRUE)
+  files_temp_glasso_pooled = list.files(path = "simulations/simulations_with_more_rounds/glasso_pooled/results/er", pattern = "*.txt", full.names = TRUE)
+  files_temp_bandwidth = list.files("simulations/simulations_with_more_rounds/results/er/tvglasso_and_tvsfglasso_bandwidth_res", pattern = "*_1.txt", full.names = TRUE)
 }
 
 Data = lapply(files_temp, 
@@ -49,7 +60,20 @@ Datagl = dplyr::bind_rows(Datagl)
 
 Datagl$Method = "pglasso"
 
-Data = dplyr::bind_rows(Data, Datagl)
+#
+
+Databand = lapply(files_temp_bandwidth, 
+                  function(x) read.table(x, 
+                                       header = TRUE, 
+                                       stringsAsFactors = TRUE))
+
+Databand = dplyr::bind_rows(Databand)
+
+Databand = Databand[, -which(colnames(Databand) == "h")]
+
+#
+
+Data = dplyr::bind_rows(Data, Datagl, Databand)
 
 #
 
@@ -67,7 +91,7 @@ boxp = ggplot(data = Data, aes(x = Method, y = Value, color = n)) +
 #boxp
 
 Data = Data %>%
-  filter(Metric %in% c("FPR", "MCC", "FDR", "Pre", "TPR", "F1"))
+  filter(Metric %in% c("FPR", "MCC", "FDR", "Pre", "TPR", "F1", "JI", "ED"))
 
 Data$Metric = droplevels(Data$Metric)
 
@@ -75,7 +99,7 @@ boxp = ggplot(data = Data, aes(x = Method, y = Value, fill = n)) +
   geom_boxplot() +
   facet_wrap(~Metric, ncol = 2, scales = "free") +
   # Colorblind-friendly colors
-  scale_fill_manual(values = c("#E69F00", "#56B4E9", "#009E73")) + 
+  #scale_fill_manual(values = c("#E69F00", "#56B4E9", "#009E73")) + 
   theme_bw() +
   theme(legend.position = "bottom", strip.text = element_text(face = "bold")) +
   labs(fill = expression(n[k]), x = NULL)
@@ -90,7 +114,7 @@ boxp_temp = ggplot(data = Data_temp,
   geom_boxplot() +
   facet_wrap(~Metric, ncol = 2, scales = "free") +
   # Colorblind-friendly colors
-  scale_fill_manual(values = c("#E69F00", "#56B4E9", "#009E73")) + 
+  #scale_fill_manual(values = c("#E69F00", "#56B4E9", "#009E73")) + 
   theme_bw() +
   theme(legend.position = "bottom", strip.text = element_text(face = "bold"))
 
@@ -131,6 +155,14 @@ if(simulator == "hglasso"){
 
 if(simulator == "smooth"){
   ggsave("simulations/simulations_with_more_rounds/results/figures/smooth_simulator.png",
+         plot = boxp,
+         dpi = 600,
+         width = 10,
+         height = 7)
+}
+
+if(simulator == "er"){
+  ggsave("simulations/simulations_with_more_rounds/results/figures/er_simulator.png",
          plot = boxp,
          dpi = 600,
          width = 10,
