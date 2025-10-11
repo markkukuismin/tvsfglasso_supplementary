@@ -53,9 +53,14 @@ pos
 length(pos)
 N
 
+h = 1 # 0.95, 1, 1.1, 1.5, 5.848/(N^1/3)
+hh = paste0("h", round(h, 3))
+hh = sub("\\.", "", hh)
+
 S_t = kernel_cov_rep_v2(X = Y, 
                         N = N,
                         pos = pos,
+                        h = h,
                         kernel = "epanechnikov")$S_t
 
 nalpha = 50
@@ -64,6 +69,8 @@ alphas = exp(alphas)
 
 Theta_tvsfgl = array(0, c(p, p, N))
 
+gamma = 0.5
+
 A_tvsfgl = vector("list", N)
 
 for(i in 1:N){
@@ -71,8 +78,6 @@ for(i in 1:N){
   # Select the optimal network using eBIC,
   
   Theta_temp = array(0, c(p, p, nalpha))
-  
-  gamma = 0.5
   
   loglik = ebic = rep(0, nalpha)
   
@@ -84,7 +89,7 @@ for(i in 1:N){
                                  alpha = alpha,
                                  K = 2) 
     
-    loglik[j] = log(det(Theta_temp[,, j])) - 
+    loglik[j] = determinant(Theta_temp[,, j], logarithm = TRUE)$modulus - 
       tr(S_t[[i]]%*%Theta_temp[,, j])
     
     df = (sum(Theta_temp[,, j] != 0) - 
@@ -95,6 +100,8 @@ for(i in 1:N){
     j = j + 1
     
   }
+  
+  #ebic[is.infinite(ebic)] = NA
   
   plot(alphas, ebic)
   
@@ -181,7 +188,7 @@ plot(G,
 
 for(i in 1:(N-1)){
   
-  G_name = paste0("real_data_examples/becker_fruitfly/figures/diff_graphs/TF_net_and_diff", i, ".png")
+  G_name = paste0("real_data_examples/becker_fruitfly/figures/", hh, "/diff_graphs/TF_net_and_diff", i, ".png")
   
   png(G_name, 
        width = 10, 
@@ -190,12 +197,12 @@ for(i in 1:(N-1)){
        res = 300)
   
   A_prev = A_tvsfgl[[i]]
-  #ind = which(colSums(A_prev) == 0)
-  #A_prev = A_prev[-ind, -ind]
+  ind = which(colSums(A_prev) == 0)
+  A_prev = A_prev[-ind, -ind]
   
   A_next = A_tvsfgl[[i+1]]
-  #ind = which(colSums(A_next) == 0)
-  #A_next = A_next[-ind, -ind]
+  ind = which(colSums(A_next) == 0)
+  A_next = A_next[-ind, -ind]
       
   G_prev = graph_from_adjacency_matrix(A_prev,
                                        mode = "undirected",
@@ -208,6 +215,8 @@ for(i in 1:(N-1)){
   diff_G = igraph::difference(G_next, G_prev)
   
   time_change = paste0(stages_uniq[i+1], "-", stages_uniq[i])
+  
+  l = igraph::layout_with_fr(G_prev)
   
   par(mfrow = c(1, 3))
   
@@ -312,7 +321,9 @@ topvgplot
 
 gridplot = gridExtra::grid.arrange(dplot, topvgplot, nrow = 2)
 
-ggsave("real_data_examples/becker_fruitfly/figures/degree_vs_time.png",
+fp = paste0("real_data_examples/becker_fruitfly/figures/", hh, "/degree_vs_time.png")
+
+ggsave(fp,
        plot = gridplot,
        dpi = 600,
        width = 10,
@@ -338,9 +349,18 @@ for(i in 1:p){
   
 }
 
-toplm = genes[order(b, decreasing = TRUE)[1:5]]
+TFs_temp = filter(TFs, ID %in% genes)
+TFs_temp = TFs_temp[match(genes, TFs_temp$ID),]
 
-Data = Degree_all[, toplm]
+tfnames = TFs_temp$name
+
+toplm = tfnames[order(b, decreasing = TRUE)[1:5]]
+
+Degree_all_temp = Degree_all
+
+colnames(Degree_all_temp) = tfnames
+
+Data = Degree_all_temp[, toplm]
 
 Data = as.data.frame(Data)
 
@@ -350,14 +370,14 @@ Data$Time = factor(Data$Time, levels = stages_uniq)
 
 Data = pivot_longer(Data, 
                     cols = 1:5, 
-                    names_to = "ID",
+                    names_to = "Name",
                     values_to = "Degree")
 
-Data$ID = as.factor(Data$ID)
+Data$Name = as.factor(Data$Name)
 
 toplmplot = ggplot(data = Data, 
-                   aes(x = Time, y = Degree, group = ID)) +
-  geom_line(aes(linetype = ID)) + 
+                   aes(x = Time, y = Degree, group = Name)) +
+  geom_line(aes(linetype = Name)) + 
   theme(legend.position="bottom",
         plot.title = element_text(face = "bold")) +
   labs(title = "(B)")
@@ -366,7 +386,49 @@ toplmplot
 
 gridplot = gridExtra::grid.arrange(dplot, toplmplot, nrow = 2)
 
-ggsave("real_data_examples/becker_fruitfly/figures/degree_vs_time_lm.png",
+fp = paste0("real_data_examples/becker_fruitfly/figures/", hh, "/degree_vs_time_lm.png")
+
+ggsave(fp,
+       plot = gridplot,
+       dpi = 600,
+       width = 10,
+       height = 7)
+
+# eve, ftz and ftz-f1
+
+eveftz = c("FBgn0000606", 
+           "FBgn0001077", 
+           "FBgn0001078")
+
+Data = Degree_all[, eveftz]
+
+Data = as.data.frame(Data)
+
+Data$Time = stages_uniq
+
+Data$Time = factor(Data$Time, levels = stages_uniq)
+
+Data = pivot_longer(Data, 
+                    cols = 1:3, 
+                    names_to = "ID",
+                    values_to = "Degree")
+
+Data$ID = as.factor(Data$ID)
+
+eveftzplot = ggplot(data = Data, 
+                   aes(x = Time, y = Degree, group = ID)) +
+  geom_line(aes(linetype = ID)) + 
+  theme(legend.position="bottom",
+        plot.title = element_text(face = "bold")) +
+  labs(title = "(B)")
+
+eveftzplot
+
+gridplot = gridExtra::grid.arrange(dplot, eveftzplot, nrow = 2)
+
+fp = paste0("real_data_examples/becker_fruitfly/figures/", hh, "/degree_vs_time_eveftz.png")
+
+ggsave(fp,
        plot = gridplot,
        dpi = 600,
        width = 10,
@@ -419,7 +481,9 @@ gridplot = gridExtra::grid.arrange(den_p_0h,
                                    den_p_20h, 
                                    ncol = 2)
 
-ggsave("real_data_examples/becker_fruitfly/figures/degree_density.png",
+fp = paste0("real_data_examples/becker_fruitfly/figures/", hh, "/degree_density.png")
+
+ggsave(fp,
        plot = gridplot,
        dpi = 600,
        width = 10,
@@ -445,25 +509,29 @@ ind = matrix(c(12, 11,
 
 stages_uniq[12:14]
 
-D_diff = vector("list", 3)
+#D_diff = vector("list", 3)
+D = vector("list", 3)
 
-for(i in 1:3){
+blip_ind = which(tfnames %in% "BLIMP-1")
+
+k = 1
+
+for(i in 12:14){
   
-  g = igraph::difference(G_list[[ind[i, 1]]],
-                         G_list[[ind[i, 2]]])
+  g = G_list[[i]]
+  V(g)$label = tfnames
+  ne = ego(g, order = 1, blip_ind)
+  g = induced_subgraph(g, unlist(ne))
   
-  V(g)$label = genes
+  D[[k]] = g
   
-  V(g)$color = "white"
-  
-  g = delete_vertices(g, degree(g) == 0)
-  
-  D_diff[[i]] = g
+  k = k + 1
   
 }
 
+fp = paste0("real_data_examples/becker_fruitfly/figures/", hh, "/becker_fruitfly_G_diff.png")
 
-png("real_data_examples/becker_fruitfly/figures/becker_fruitfly_G_diff.png", 
+png(fp, 
      width = 10, 
      height = 7, 
      units = 'in', 
@@ -471,30 +539,33 @@ png("real_data_examples/becker_fruitfly/figures/becker_fruitfly_G_diff.png",
 
 par(mfrow = c(1, 3))
 
-coords = layout_in_circle(D_diff[[1]])
+d = V(D[[1]])[which.max(degree(D[[1]]))]
+l = layout_as_star(D[[1]], center = d)
 
-plot(D_diff[[1]], 
-     layout = coords,
+plot(D[[1]], 
+     layout = l,
      vertex.size = 4,
      edge.width = 4,
      vertex.label.cex = 1.5,
      vertex.label.color = "black")
 title("(A)", cex.main = 3)
 
-coords = layout_in_circle(D_diff[[2]])
+d = V(D[[2]])[which.max(degree(D[[2]]))]
+l = layout_as_star(D[[2]], center = d)
 
-plot(D_diff[[2]], 
-     layout = coords,
+plot(D[[2]], 
+     layout = l,
      vertex.size = 4,
      edge.width = 4,
      vertex.label.cex = 1.5,
      vertex.label.color = "black")
 title("(B)", cex.main = 3)
 
-coords = layout_in_circle(D_diff[[3]])
+d = V(D[[3]])[which.max(degree(D[[3]]))]
+l = layout_as_star(D[[3]], center = d)
 
-plot(D_diff[[3]], 
-     layout = coords,
+plot(D[[3]], 
+     layout = l,
      vertex.size = 4,
      edge.width = 4,
      vertex.label.cex = 1.5,
@@ -502,3 +573,200 @@ plot(D_diff[[3]],
 title("(C)", cex.main = 3)
 
 dev.off()
+
+# Neighborhoods of eve, ftz and ftz-f1
+
+# FBgn0000606 EVE
+# FBgn0001077 FTZ
+# FBgn0001078 FTZ-F1
+
+ftzne = vector(mode = "list", length = N)
+
+for(k in 1:3){
+  
+  eveind = which(genes %in% eveftz[k])
+  
+  for(i in 1:(N-1)){
+    
+    if(k == 1) G_name = paste0("real_data_examples/becker_fruitfly/figures/", hh, "/diff_graphs/eve_ftz/eve/TF_net_diff_eve", i, ".png")
+    if(k == 2) G_name = paste0("real_data_examples/becker_fruitfly/figures/", hh, "/diff_graphs/eve_ftz/ftz/TF_net_diff_ftz", i, ".png")
+    if(k == 3) G_name = paste0("real_data_examples/becker_fruitfly/figures/", hh, "/diff_graphs/eve_ftz/ftzf1/TF_net_diff_ftzf", i, ".png")
+    
+    png(G_name, 
+        width = 10, 
+        height = 7, 
+        units = 'in', 
+        res = 300)
+    
+    g_prev = G_list[[i]]
+    V(g_prev)$label = genes
+    ne = ego(g_prev, order = 1, eveind)
+    g_prev <- induced_subgraph(g_prev, unlist(ne))
+    
+    g_next = G_list[[i+1]]
+    V(g_next)$label = genes
+    ne = ego(g_next, order = 1, eveind)
+    g_next <- induced_subgraph(g_next, unlist(ne))
+    
+    # par(mfrow = c(1, 2))
+    # plot(g_prev)
+    # plot(g_next)
+    
+    diff_G = igraph::difference(g_next, g_prev)
+    
+    time_change = paste0(stages_uniq[i+1], "-", stages_uniq[i])
+    
+    par(mfrow = c(1, 3))
+    
+    d = V(g_prev)[which.max(degree(g_prev))]
+    l = layout_as_star(g_prev, 
+                       center = d)
+    
+    plot(g_prev, 
+         vertex.size = 5,
+         main = stages_uniq[i],
+         layout = l)
+    
+    d = V(g_next)[which.max(degree(g_next))]
+    l = layout_as_star(g_next, 
+                       center = d)
+    
+    plot(g_next, 
+         vertex.size = 5,
+         main = stages_uniq[i+1],
+         layout = l)
+    
+    d = V(diff_G)[which.max(degree(diff_G))]
+    l = layout_as_star(diff_G, 
+                       center = d)
+    
+    plot(diff_G, 
+         vertex.size = 5, 
+         main = time_change,
+         layout = l)
+    
+    dev.off()
+    
+  }
+  
+  
+}
+
+# FTZ-F1
+
+ftzne_table = data.frame()
+
+ind = which(genes %in% "FBgn0001078")
+
+TFs_temp = filter(TFs, ID %in% genes)
+
+TFs_temp = TFs_temp[match(genes, TFs_temp$ID),]
+
+for(i in 1:N){
+  
+  g = A_tvsfgl[[i]]
+  ne = c(ind, which(g[, ind] != 0))
+  
+  ftzne[[i]] = genes[ne]
+  
+  lne = length(ne)
+  
+  ne_gnames = TFs_temp[ne, 2]
+  
+  ftzne_table_temp = data.frame(time = rep(stages_uniq[i], lne), 
+                                ne = genes[ne],
+                                name = ne_gnames)
+   
+  ftzne_table = rbind(ftzne_table, ftzne_table_temp)
+    
+}
+
+fp = paste0("real_data_examples/becker_fruitfly/figures/", hh, "/ftz_f1.txt")
+write.table(ftzne_table, fp, row.names = FALSE, quote = FALSE)
+
+uniq_ne = distinct(ftzne_table, ne, .keep_all = TRUE)
+fp = paste0("real_data_examples/becker_fruitfly/figures/", hh, "/ftz_f1_unique.txt")
+write.table(uniq_ne, fp, row.names = FALSE, quote = FALSE)
+
+plot(rep(pos, each = 4), 
+     X[, "FBgn0035625"], 
+     type = "b", 
+     main = "BLIMP-1 vs. FTZ-F1", 
+     ylim = c(-2, 3))
+
+lines(rep(pos, each = 4), 
+      X[, "FBgn0001078"], 
+      col = "red") # FBgn0001078 FTZ-F1
+
+# FTZ
+
+ftzne_table = data.frame()
+
+ind = which(genes %in% "FBgn0001077")
+
+TFs_temp = filter(TFs, ID %in% genes)
+
+TFs_temp = TFs_temp[match(genes, TFs_temp$ID),]
+
+for(i in 1:N){
+  
+  g = A_tvsfgl[[i]]
+  ne = c(ind, which(g[, ind] != 0))
+  
+  ftzne[[i]] = genes[ne]
+  
+  lne = length(ne)
+  
+  ne_gnames = TFs_temp[ne, 2]
+  
+  ftzne_table_temp = data.frame(time = rep(stages_uniq[i], lne), 
+                                ne = genes[ne],
+                                name = ne_gnames)
+  
+  ftzne_table = rbind(ftzne_table, ftzne_table_temp)
+  
+}
+
+fp = paste0("real_data_examples/becker_fruitfly/figures/", hh, "/ftz.txt")
+write.table(ftzne_table, fp, row.names = FALSE, quote = FALSE)
+
+uniq_ne = distinct(ftzne_table, ne, .keep_all = TRUE)
+fp = paste0("real_data_examples/becker_fruitfly/figures/", hh, "/ftz_unique.txt")
+write.table(uniq_ne, fp, row.names = FALSE, quote = FALSE)
+
+
+# BLIMP-1
+
+ftzne_table = data.frame()
+
+ind = which(genes %in% "FBgn0035625")
+
+TFs_temp = filter(TFs, ID %in% genes)
+
+TFs_temp = TFs_temp[match(genes, TFs_temp$ID),]
+
+for(i in 1:N){
+  
+  g = A_tvsfgl[[i]]
+  ne = c(ind, which(g[, ind] != 0))
+  
+  ftzne[[i]] = genes[ne]
+  
+  lne = length(ne)
+  
+  ne_gnames = TFs_temp[ne, 2]
+  
+  ftzne_table_temp = data.frame(time = rep(stages_uniq[i], lne), 
+                                ne = genes[ne],
+                                name = ne_gnames)
+  
+  ftzne_table = rbind(ftzne_table, ftzne_table_temp)
+  
+}
+
+fp = paste0("real_data_examples/becker_fruitfly/figures/", hh, "/BLIMP.txt")
+write.table(ftzne_table, fp, row.names = FALSE, quote = FALSE)
+
+uniq_ne = distinct(ftzne_table, ne, .keep_all = TRUE)
+fp = paste0("real_data_examples/becker_fruitfly/figures/", hh, "/BLIMP_unique.txt")
+write.table(uniq_ne, fp, row.names = FALSE, quote = FALSE)
