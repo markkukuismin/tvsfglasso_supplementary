@@ -27,7 +27,8 @@ kernel_cov <- function(X = NULL, pos = NULL, h = NULL, use_cor = FALSE, kernel =
   
   if(is.null(pos)) pos <- 1:N
   
-  if(is.null(h)) h <- 5.848/N^(1/3) # (200)^(1/3) = 5.848, See Zhou et al (2010) examples
+  #if(is.null(h)) h <- 5.848/N^(1/3) # Zhou et al 2010 when changes time point 200, 200^1/3 = 5.848
+  if(is.null(h)) h <- 1
   
   sdX <- rep(1, p)
   
